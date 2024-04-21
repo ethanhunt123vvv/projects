@@ -1,0 +1,132 @@
+#include <MPU6050_tockn.h>
+#include <Wire.h>
+#include<LiquidCrystal_I2C.h>
+#include <SoftwareSerial.h>
+int led_left2 = 11;
+int led_left1 = 10;
+int led_mid0 = 9;
+int led_right1 = 8;
+int led_right2 = 7;
+SoftwareSerial espSerial(5, 6);
+String str;
+MPU6050 mpu6050(Wire);
+long timer = 0;
+void setup() {
+ Serial.begin(115200);
+ espSerial.begin(115200);
+ Wire.begin();
+ mpu6050.begin();
+ mpu6050.calcGyroOffsets(true);
+ pinMode(led_left2, OUTPUT);
+ pinMode(led_left1, OUTPUT);
+ pinMode(led_mid0, OUTPUT);
+ pinMode(led_right1, OUTPUT);
+ pinMode(led_right2, OUTPUT);
+}
+void loop() {
+ mpu6050.update();
+ if(millis() - timer > 1000){
+ Serial.print("Temperature in Celsius ");Serial.println(mpu6050.getTemp());
+ Serial.println("Acceleration in X-axis : ");Serial.print(mpu6050.getAccX());
+ Serial.print("m/s^2 \n");
+ Serial.println("Acceleration in Y-axis : ");Serial.print(mpu6050.getAccY());
+ Serial.print("m/s^2\n");
+ Serial.println("Acceleration in Z-axis : ");Serial.println(mpu6050.getAccZ());
+ Serial.print("m/s^2\n");
+ 
+ Serial.println("Rotational velocity about X-axis : ");Serial.print(mpu6050.getGyroX());
+ Serial.print("rad/sec \n");
+ Serial.println("Rotational velocity about Y-axis : ");Serial.print(mpu6050.getGyroY());
+ Serial.print("rad/sec \n");
+ Serial.println("Rotational velocity about Z-axis : ");Serial.print(mpu6050.getGyroZ());
+ Serial.print("rad/sec \n");
+ 
+ Serial.print("Angular acceleration about X axis: ");Serial.print(mpu6050.getAccAngleX());
+ Serial.print("\n");
+ Serial.print("Angular acceleration about Y axis: ");Serial.print(mpu6050.getAccAngleY());
+ Serial.print("\n");
+ 
+ Serial.print("Angular Rotation about X axis : ");Serial.print(mpu6050.getGyroAngleX());
+ Serial.print("\n");
+ Serial.print("Angular Rotation about Y axis : ");Serial.print(mpu6050.getGyroAngleY());
+ Serial.print("\n");
+ Serial.print("Angular Rotation about Z axis : ");Serial.print(mpu6050.getGyroAngleZ());
+ Serial.print("\n");
+ 
+ Serial.println("Pitch in degrees : ");Serial.print(mpu6050.getAngleX());
+ Serial.print("\n");
+ Serial.println("Roll in degrees : ");Serial.print(mpu6050.getAngleY());
+ Serial.print("\n");
+ Serial.println("Yaw in degrees : ");Serial.print(mpu6050.getAngleZ());
+ Serial.print("\n");
+ delay(1000);
+ }
+ if(mpu6050.getAngleY()<-45)
+ {
+ // turn on level led 
+ digitalWrite(led_left2,HIGH);
+ delay(250);
+ digitalWrite(led_left2,LOW);
+ delay(250);
+ digitalWrite(led_left1,LOW);
+ digitalWrite(led_mid0,LOW);
+ digitalWrite(led_right1,LOW);
+ digitalWrite(led_right2,LOW);
+ }
+ else if((mpu6050.getAngleY()>-45.00)&&(mpu6050.getAngleY()<-30.00))
+ {
+ // turn on level led 
+ digitalWrite(led_left2,LOW);
+ digitalWrite(led_left1,HIGH);
+ delay(500);
+ digitalWrite(led_left1,LOW);
+ delay(500);
+ digitalWrite(led_mid0,LOW);
+ digitalWrite(led_right1,LOW);
+ digitalWrite(led_right2,LOW);
+ }
+ else if ((mpu6050.getAngleY()>-29.99)&&(mpu6050.getAngleY()<30.00))
+ {
+ // turn on level led 
+ digitalWrite(led_left2,LOW);
+ digitalWrite(led_left1,LOW );
+ digitalWrite(led_mid0,HIGH);
+ digitalWrite(led_right1,LOW);
+ digitalWrite(led_right2,LOW);
+ } 
+ else if((mpu6050.getAngleY()>30.01)&&(mpu6050.getAngleY()<45.00))
+ {
+ // turn on level led 
+ digitalWrite(led_left2,LOW );
+ digitalWrite(led_left1,LOW );
+ digitalWrite(led_mid0,LOW );
+ digitalWrite(led_right1,HIGH );
+ delay(250);
+ digitalWrite(led_right1,LOW );
+ delay(250);
+ digitalWrite(led_right2,LOW );
+ } 
+ else if(mpu6050.getAngleY()>45.00)
+ // turn on level led 
+ {
+ digitalWrite(led_left2,LOW );
+ digitalWrite(led_left1,LOW );
+ digitalWrite(led_mid0,LOW );
+ digitalWrite(led_right1,LOW );
+ digitalWrite(led_right2,HIGH );
+ delay(500);
+ digitalWrite(led_right2,LOW );
+ delay(500);
+ }
+if (espSerial.available()>0)
+ {
+ //int data = mpu6050.getAngleX();
+ //Serial.println(data);
+ espSerial.write(mpu6050.getAngleX());
+ delay(70);
+ espSerial.write(int(mpu6050.getAngleY()));
+ delay(70);
+ espSerial.write(int(mpu6050.getAngleZ()));
+ delay(70); 
+ }
+}

@@ -1,0 +1,226 @@
+#include "DHT.h"
+
+#include <Wire.h>  
+
+#include <Adafruit_GFX.h> 
+
+#include <Adafruit_SSD1306.h> 
+
+#include <Adafruit_Sensor.h> 
+
+#include <ESP8266WiFi.h> 
+
+#include <ESP8266HTTPClient.h>
+
+//Initialisations for DHT11 Sensor
+
+#define DHTPIN 0
+
+#define DHTTYPE DHT11
+
+DHT dht(DHTPIN, DHTTYPE); 
+
+float Temperature;
+
+float Humidity;
+
+//End Of Initialisations for DHT11 Sensor
+
+//Initialisations for SSD1306 Sensor
+
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+
+// Declaration for the SSD1306 display connected via I2C -> SDA + SCL Pins
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+//"&Wire" Declares the I2C Communication Protocol 
+
+//"-1" tells that the OLED display has no RESET Pin which is the case with our OLED Display.
+
+//End Of Initialisations for SSD1306 Sensor
+
+// Declare global variables which will be uploaded to server
+
+String sendval, sendval2, postData;
+
+void setup() {
+
+  dht.begin();     
+
+  Serial.begin(115200); 
+
+  Serial.println("Communication Started \n\n");  
+
+  delay(1000);
+
+  pinMode(LED_BUILTIN, OUTPUT);     // initialize built in led on the board
+
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+
+    Serial.println(F("SSD1306 allocation failed"));
+
+    for(;;);
+
+  }
+
+  delay(2000);
+
+  display.clearDisplay();
+
+  display.setTextColor(WHITE);
+
+  WiFi.mode(WIFI_AP);
+
+  WiFi.softAP("NodeMCU", "nodemcur"); 
+
+  delay(200);
+
+    while (WiFi.softAPgetStationNum() !=1)   {      //loop here while no AP is connected to this station
+
+      Serial.print(".");
+
+      delay(100);                            
+
+      }
+
+  delay(500);
+
+}
+
+void loop(){ 
+
+  //read temperature and humidity
+
+  float temperature = dht.readTemperature();
+
+  float humidity = dht.readHumidity();  
+
+  if(isnan(temperature) || isnan(humidity)){
+
+    Serial.println("Failed to read DHT11");
+
+  } else {
+
+    Serial.print("Humidity: ");
+
+    Serial.print(humidity);
+
+    Serial.print(" %\t");
+
+    Serial.print("Temperature: ");
+
+    Serial.print(temperature);
+
+    Serial.println(" *C");
+
+    delay(450);
+
+  }
+
+  // clear display
+
+  display.clearDisplay();
+
+  // display temperature
+
+  display.setTextSize(1);
+
+  display.setCursor(0,0);
+
+  display.print("Temperature: ");
+
+  display.setTextSize(2);
+
+  display.setCursor(0,10);
+
+  display.print(temperature);
+
+  display.print(" ");
+
+  display.setTextSize(1);
+
+  display.cp437(true);
+
+  display.write(167);
+
+  display.setTextSize(2);
+
+  display.print("C");
+
+  // display humidity
+
+  display.setTextSize(1);
+
+  display.setCursor(0, 35);
+
+  display.print("Humidity: ");
+
+  display.setTextSize(2);
+
+  display.setCursor(0, 45);
+
+  display.print(humidity);
+
+  display.print(" %"); 
+
+  display.display();
+
+  HTTPClient http;    // http object of clas HTTPClient
+
+  // Convert to float
+
+  sendval = float(temperature);  
+
+  sendval2 = float(humidity);   
+
+  postData = "sendval=" + sendval + "&sendval2=" + sendval2;
+
+  // We can post values to PHP files as  example.com/dbwrite.php?name1=val1&name2=val2
+
+  // Hence created variable postData and stored our variables in it in desired format
+
+  // Update Host URL here:-  
+
+  http.begin("http://192.168.4.2/dbwrite.php");                             // Connect to host where MySQL database is hosted
+
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");        //Specify content-type header
+
+  int httpCode = http.POST(postData);   // Send POST request to php file and store server response code in variable named httpCode
+
+  Serial.println("Values are, sendval = " + sendval + " and sendval2 = "+sendval2 );
+
+  // if connection eatablished then do this
+
+  if (httpCode == 200) { Serial.println("Values uploaded successfully."); Serial.println(httpCode); 
+
+    String webpage = http.getString();    // Get html webpage output and store it in a string
+
+    Serial.println(webpage + "\n");
+
+  } else { 
+
+    // if failed to connect then return and restart
+
+    Serial.println(httpCode); 
+
+    Serial.println("Failed to upload values. \n"); 
+
+    http.end(); 
+
+    return; 
+
+  }
+
+  delay(200); 
+
+  digitalWrite(LED_BUILTIN, LOW);
+
+  delay(200);
+
+  digitalWrite(LED_BUILTIN, HIGH);
+
+}
+
